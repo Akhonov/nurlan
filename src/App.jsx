@@ -105,7 +105,10 @@ function App() {
   }
 
   const handleOpenPdf = (href) => {
-    window.open(href, '_blank', 'noopener,noreferrer')
+    const normalizedHref = href.startsWith('/') ? href.slice(1) : href
+    const pdfUrl = new URL(normalizedHref, import.meta.env.BASE_URL)
+
+    window.open(pdfUrl.toString(), '_blank', 'noopener,noreferrer')
   }
 
   return (
