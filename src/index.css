@@ -112,7 +112,7 @@ h3 {
   top: 18px;
   z-index: 20;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   margin-bottom: 24px;
@@ -216,6 +216,11 @@ h3 {
   align-items: center;
 }
 
+.desktop-nav {
+  min-width: 0;
+  justify-content: center;
+}
+
 .site-nav button,
 .footer-links button {
   padding: 0;
@@ -255,7 +260,7 @@ h3 {
 }
 
 .nav-group-trigger::after {
-  content: '▾';
+  content: '\25BE';
   margin-left: 8px;
   font-size: 0.8rem;
   opacity: 0.7;
@@ -1439,6 +1444,11 @@ h3 {
 
 .directory-table td {
   color: var(--text);
+}
+
+.directory-table td:last-child,
+.directory-table a {
+  white-space: nowrap;
 }
 
 .directory-link {
