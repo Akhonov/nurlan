@@ -1,1316 +1,867 @@
-import { useEffect, useState } from 'react'
-import heroDoctors from './assets/hero-doctors.png'
-import {
-  aboutChapters,
-  aboutIntro,
-  careerNarrative,
-  certificates,
-  contactChannels,
-  cultureCards,
-  directoryBranchProfiles,
-  directoryEntries,
-  geographyNotes,
-  heroTags,
-  navigation,
-  networkCities,
-  partnerBrands,
-  peopleStories,
-  peopleStoriesIntro,
-  priorities,
-  qualityTimeline,
-  serviceTracks,
-  spotlightMetrics,
-} from './content'
-import {
-  directoryMapMarkers,
-  directoryMapMeta,
-  directoryMapRegions,
-} from './directoryMap'
+import { useEffect, useId, useState } from 'react'
+import { directoryMapMeta, directoryMapRegions } from './directoryMap.js'
 
-const PAGE_DEFINITIONS = [
-  { id: 'home', label: 'Главная', eyebrow: 'STOFARM' },
-  { id: 'about', label: navigation[0]?.label ?? 'О нас', eyebrow: 'Компания' },
-  { id: 'stories', label: navigation[1]?.label ?? 'Команда', eyebrow: 'Люди' },
-  {
-    id: 'certificates',
-    label: navigation[2]?.label ?? 'Сертификаты',
-    eyebrow: 'Качество',
-  },
-  {
-    id: 'solutions',
-    label: navigation[3]?.label ?? 'Партнерство',
-    eyebrow: 'Сотрудничество',
-  },
-  {
-    id: 'pharmacovigilance',
-    label: 'Фармаконадзор',
-    eyebrow: 'Безопасность',
-  },
-  {
-    id: 'network',
-    label: navigation[4]?.label ?? 'Филиалы',
-    eyebrow: 'Сеть',
-  },
-  { id: 'career', label: navigation[5]?.label ?? 'Карьера', eyebrow: 'Рост' },
-  { id: 'contact', label: navigation[6]?.label ?? 'Контакты', eyebrow: 'Связь' },
-  { id: 'directory', label: 'Справочная', eyebrow: 'Контакты' },
+const baseUrl = import.meta.env.BASE_URL
+
+const routes = [
+  { path: '/', label: 'Главная' },
+  { path: '/company', label: 'Компания' },
+  { path: '/partners', label: 'Партнерам' },
+  { path: '/quality', label: 'Качество' },
+  { path: '/network', label: 'Сеть' },
+  { path: '/career', label: 'Карьера' },
+  { path: '/contacts', label: 'Контакты' },
 ]
 
-const NAV_GROUPS = [
+const metrics = [
+  { value: '2003', label: 'год основания' },
+  { value: '200+', label: 'прямых контрактов' },
+  { value: '1 200 м3', label: 'обработки в день' },
+  { value: '1 500', label: 'позиций ежедневно' },
+]
+
+const priorities = [
   {
-    id: 'company',
-    label: 'Компания',
-    items: ['about', 'stories', 'certificates'],
+    title: 'Федеральная точность, локальная близость',
+    text: 'Филиальная сеть помогает держать единый стандарт поставок и быстро отвечать на запросы аптек, клиник и производителей.',
   },
   {
-    id: 'partnership',
-    label: 'Партнерство',
-    items: ['solutions', 'pharmacovigilance', 'network'],
+    title: 'Качество без пауз',
+    text: 'ISO, GDP-процессы, контроль документации и работа с претензиями встроены в ежедневную операционную модель.',
   },
   {
-    id: 'career-group',
-    label: 'Карьера',
-    items: ['career'],
-  },
-  {
-    id: 'contact-group',
-    label: 'Контакты',
-    items: ['contact', 'directory'],
+    title: 'Партнерство на годы',
+    text: 'Компания развивает долгосрочные отношения с международными и казахстанскими брендами, делая цепочку поставки устойчивой.',
   },
 ]
 
-const LEGACY_HASH_MAP = {
-  top: 'home',
-  about: 'about',
-  faces: 'stories',
-  certificates: 'certificates',
-  quality: 'certificates',
-  solutions: 'solutions',
-  pharmacovigilance: 'pharmacovigilance',
-  network: 'network',
-  career: 'career',
-  contact: 'contact',
-  directory: 'directory',
-}
+const serviceTracks = [
+  {
+    kicker: 'Производителям',
+    title: 'Выход на рынок Казахстана через управляемую дистрибуционную сеть',
+    text: 'Помогаем выстроить национальное покрытие, ритм отгрузок, прозрачный документооборот и стабильную коммуникацию с филиалами.',
+    points: ['национальное покрытие', 'контроль остатков', 'регулярные поставки', 'быстрое масштабирование'],
+  },
+  {
+    kicker: 'Аптекам и клиникам',
+    title: 'Надежный канал поставки лекарственных средств и медицинских изделий',
+    text: 'Единые стандарты сервиса и логистики снижают риск разрывов в ассортименте и помогают планировать закупки заранее.',
+    points: ['оперативная связь', 'единый стандарт', 'документы в порядке', 'прогнозируемые сроки'],
+  },
+  {
+    kicker: 'Команде',
+    title: 'Среда, где процессы, обучение и культура поддерживают рост',
+    text: 'Сильная внутренняя школа, командные традиции и современный управленческий подход превращают масштаб в преимущество.',
+    points: ['обучение', 'карьерные маршруты', 'бережливые практики', 'корпоративная культура'],
+  },
+]
 
-const DIRECTORY_MAP_LABELS = {
-  aktau: '\u0410\u043a\u0442\u0430\u0443',
-  aktobe: '\u0410\u043a\u0442\u043e\u0431\u0435',
-  almaty: '\u0410\u043b\u043c\u0430\u0442\u044b',
-  astana: '\u0410\u0441\u0442\u0430\u043d\u0430',
-  atyrau: '\u0410\u0442\u044b\u0440\u0430\u0443',
-  karaganda: '\u041a\u0430\u0440\u0430\u0433\u0430\u043d\u0434\u0430',
-  kokshetau: '\u041a\u043e\u043a\u0448\u0435\u0442\u0430\u0443',
-  kostanay: '\u041a\u043e\u0441\u0442\u0430\u043d\u0430\u0439',
-  kyzylorda: '\u041a\u044b\u0437\u044b\u043b\u043e\u0440\u0434\u0430',
-  pavlodar: '\u041f\u0430\u0432\u043b\u043e\u0434\u0430\u0440',
-  petropavlovsk: '\u041f\u0435\u0442\u0440\u043e\u043f\u0430\u0432\u043b.',
-  shymkent: '\u0428\u044b\u043c\u043a\u0435\u043d\u0442',
-  taraz: '\u0422\u0430\u0440\u0430\u0437',
-  uralsk: '\u0423\u0440\u0430\u043b\u044c\u0441\u043a',
-  'ust-kamenogorsk': '\u0423\u0441\u0442\u044c-\u041a\u0430\u043c.',
-}
+const qualityItems = [
+  {
+    year: '2008',
+    title: 'Регулярные ISO-аудиты',
+    text: 'Система менеджмента качества развивается как постоянный цикл: проверка, улучшение, внедрение и повторная оценка.',
+  },
+  {
+    year: '2009',
+    title: 'Фокус на GDP',
+    text: 'Дистрибуция строится вокруг правильного хранения, транспортировки, прослеживаемости и ответственности на каждом этапе.',
+  },
+  {
+    year: 'Сегодня',
+    title: 'Цифровой контроль',
+    text: 'Команда использует современные информационные и логистические инструменты для управления товарными потоками.',
+  },
+]
 
-const DIRECTORY_MAP_SMALL_LABELS = new Set([
-  'petropavlovsk',
-  'ust-kamenogorsk',
-])
+const branches = [
+  {
+    id: 'kostanay',
+    city: 'Костанай',
+    branch: 'Головной офис',
+    address: 'пр. Аль-Фараби 111 А',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'astana',
+    city: 'Астана',
+    branch: 'Астанинский филиал',
+    address: 'р-н Алматы, ул. А 207, здание 9',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'almaty',
+    city: 'Алматы',
+    branch: 'Алматинский филиал',
+    address: 'мкр. Каргалы, ул. Кенесары хана, 83/1',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'karaganda',
+    city: 'Караганда',
+    branch: 'Карагандинский филиал',
+    address: 'ул. Новогородская, 2а',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'aktobe',
+    city: 'Актобе',
+    branch: 'Актюбинский филиал',
+    address: '41 разъезд, 114',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'atyrau',
+    city: 'Атырау',
+    branch: 'Атырауский филиал',
+    address: 'ул. Азаттык, 116 А',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'aktau',
+    city: 'Актау',
+    branch: 'Актауский филиал',
+    address: 'промышленная зона N 9, участок N 29',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'pavlodar',
+    city: 'Павлодар',
+    branch: 'Павлодарский филиал',
+    address: 'ул. Комбинатская, 35',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'petropavlovsk',
+    city: 'Петропавловск',
+    branch: 'Петропавловский филиал',
+    address: 'ул. Шухова, 18',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'kokshetau',
+    city: 'Кокшетау',
+    branch: 'Кокшетауский филиал',
+    address: 'п.з. Северная, пр-д 3, ст-е 62',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'uralsk',
+    city: 'Уральск',
+    branch: 'Уральский филиал',
+    address: 'ул. Поповича, 12',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'ust-kamenogorsk',
+    city: 'Усть-Каменогорск',
+    branch: 'Усть-Каменогорский филиал',
+    address: 'пр. Сатпаева, 62',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'shymkent',
+    city: 'Шымкент',
+    branch: 'Шымкентский филиал',
+    address: 'ул. Капал Батыра, территория Ондиристик, N 116/2',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'taraz',
+    city: 'Тараз',
+    branch: 'Таразский филиал',
+    address: '1 микрорайон Акбулак, дом 21',
+    phone: '+7 (7142) 91-77-10',
+  },
+  {
+    id: 'kyzylorda',
+    city: 'Кызылорда',
+    branch: 'Кызылординский филиал',
+    address: 'пр. Абая, угол ул. Садуакасова',
+    phone: '+7 (7142) 91-77-10',
+  },
+]
 
-const DIRECTORY_MAP_MARKER_OFFSETS = {
-  astana: { x: 16, y: -12 },
-}
+const cultureCards = [
+  {
+    title: 'Школа роста',
+    text: 'Обучение, наставничество и управленческие практики помогают сотрудникам двигаться по вертикали и горизонтали.',
+  },
+  {
+    title: 'Командный ритм',
+    text: 'Филиалы работают как единая команда: с общими стандартами, традициями и понятной ответственностью.',
+  },
+  {
+    title: 'Открытые роли',
+    text: 'Сайт готов к публикации вакансий: логистика, продажи, качество, складские процессы и офисные направления.',
+  },
+]
 
-function getPageFromHash() {
-  if (typeof window === 'undefined') {
-    return 'home'
-  }
+const partnerBrands = [
+  {
+    name: 'Johnson & Johnson',
+    caption: 'innovative medicine',
+    logo: `${baseUrl}partner-logos/johnson-johnson.svg`,
+  },
+  {
+    name: 'AstraZeneca',
+    caption: 'biopharmaceuticals',
+    logo: `${baseUrl}partner-logos/astrazeneca.svg`,
+  },
+  {
+    name: 'Abbott Laboratories',
+    caption: 'healthcare products',
+    logo: `${baseUrl}partner-logos/abbott.svg`,
+  },
+  {
+    name: 'SANTO',
+    caption: 'Kazakhstan pharma',
+    logo: `${baseUrl}partner-logos/santo.svg`,
+  },
+  {
+    name: 'Berlin-Chemie',
+    caption: 'European portfolio',
+    logo: `${baseUrl}partner-logos/berlin-chemie.jpg`,
+  },
+  {
+    name: 'Sandoz',
+    caption: 'generics & biosimilars',
+    logo: `${baseUrl}partner-logos/sandoz.svg`,
+  },
+  {
+    name: 'Bionorica',
+    caption: 'phytomedicine',
+    logo: `${baseUrl}partner-logos/bionorica.svg`,
+  },
+]
 
-  const hash = window.location.hash.replace('#', '')
-
-  if (PAGE_DEFINITIONS.some((page) => page.id === hash)) {
-    return hash
-  }
-
-  return LEGACY_HASH_MAP[hash] ?? 'home'
+function getRouteFromHash() {
+  const rawRoute = window.location.hash.replace(/^#/, '') || '/'
+  return routes.some((route) => route.path === rawRoute) ? rawRoute : '/'
 }
 
 function App() {
-  const [activeTrack, setActiveTrack] = useState(serviceTracks[0].id)
-  const [activePage, setActivePage] = useState(getPageFromHash)
-  const [formStatus, setFormStatus] = useState('')
-  const [navOpen, setNavOpen] = useState(false)
-  const [openGroup, setOpenGroup] = useState(null)
+  const [activePath, setActivePath] = useState(getRouteFromHash)
 
   useEffect(() => {
     const handleHashChange = () => {
-      setActivePage(getPageFromHash())
-      window.scrollTo({ top: 0, behavior: 'auto' })
+      setActivePath(getRouteFromHash())
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  useEffect(() => {
-    const elements = document.querySelectorAll('[data-reveal]')
-
-    if (!elements.length) {
-      return undefined
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      {
-        threshold: 0.12,
-        rootMargin: '0px 0px -40px 0px',
-      },
-    )
-
-    elements.forEach((element) => observer.observe(element))
-
-    return () => observer.disconnect()
-  }, [activePage])
-
-  const activeService =
-    serviceTracks.find((track) => track.id === activeTrack) ?? serviceTracks[0]
-
-  const pageById = Object.fromEntries(
-    PAGE_DEFINITIONS.map((page) => [page.id, page]),
-  )
-
-  const handlePageChange = (pageId) => {
-    setActivePage(pageId)
-    setNavOpen(false)
-    setOpenGroup(null)
-    window.history.replaceState(null, '', `#${pageId}`)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleSubmit = (event) => {
-    event.preventDefault()
-
-    const formData = new FormData(event.currentTarget)
-    const name = formData.get('name')?.toString().trim() ?? ''
-    const company = formData.get('company')?.toString().trim() ?? ''
-    const phone = formData.get('phone')?.toString().trim() ?? ''
-    const email = formData.get('email')?.toString().trim() ?? ''
-    const message = formData.get('message')?.toString().trim() ?? ''
-    const subject = company
-      ? `Запрос с сайта STOFARM: ${company}`
-      : 'Запрос с сайта STOFARM'
-
-    const lines = [
-      'Здравствуйте, команда STOFARM!',
-      '',
-      `Имя: ${name}`,
-      `Компания: ${company}`,
-      `Телефон: ${phone || 'не указан'}`,
-      `Email: ${email}`,
-      '',
-      'Комментарий:',
-      message || 'Без комментария',
-    ]
-
-    window.location.href = `mailto:kanc@stopharm.kz?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`
-
-    setFormStatus('Черновик письма открыт.')
-    event.currentTarget.reset()
-  }
-
-  const handleOpenPdf = (href) => {
-    const normalizedHref = href.startsWith('/') ? href.slice(1) : href
-    const basePath = import.meta.env.BASE_URL.endsWith('/')
-      ? import.meta.env.BASE_URL
-      : `${import.meta.env.BASE_URL}/`
-    const pdfUrl = `${basePath}${normalizedHref}`
-
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer')
-  }
+  const Page = pageMap[activePath] ?? HomePage
 
   return (
-    <div className="page-shell">
-      <header className={`site-header ${navOpen ? 'is-open' : ''}`}>
-        <button
-          className="brand"
-          onClick={() => handlePageChange('home')}
-          type="button"
-          aria-label="STOFARM"
-        >
-          <span className="brand-mark">
-            <span className="brand-dot"></span>
-          </span>
-          <span className="brand-copy">
-            <strong>STOFARM</strong>
-            <small>Фармдистрибуция Казахстана</small>
-          </span>
-        </button>
-
-        <nav className="site-nav desktop-nav" aria-label="Навигация по сайту">
-          <button
-            className={activePage === 'home' ? 'active' : ''}
-            onClick={() => handlePageChange('home')}
-            type="button"
-          >
-            Главная
-          </button>
-
-          {NAV_GROUPS.map((group) => (
-            <div key={group.id} className="nav-group">
-              <button
-                className={
-                  group.items.includes(activePage)
-                    ? 'active nav-group-trigger'
-                    : 'nav-group-trigger'
-                }
-                type="button"
-              >
-                {group.label}
-              </button>
-
-              <div className="nav-dropdown">
-                {group.items.map((itemId) => (
-                  <button
-                    key={itemId}
-                    className={activePage === itemId ? 'active' : ''}
-                    onClick={() => handlePageChange(itemId)}
-                    type="button"
-                  >
-                    {pageById[itemId]?.label ?? itemId}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        <div className="header-actions">
-          <button
-            className="header-cta"
-            onClick={() => handlePageChange('contact')}
-            type="button"
-          >
-            Связаться
-          </button>
-
-          <button
-            className={`nav-toggle ${navOpen ? 'is-open' : ''}`}
-            type="button"
-            onClick={() => setNavOpen((value) => !value)}
-            aria-expanded={navOpen}
-            aria-controls="site-navigation"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-        </div>
-
-        <div className="mobile-panel" id="site-navigation">
-          <nav className="site-nav mobile-nav" aria-label="Мобильная навигация">
-            <button
-              className={activePage === 'home' ? 'active' : ''}
-              onClick={() => handlePageChange('home')}
-              type="button"
-            >
-              Главная
-            </button>
-
-            {NAV_GROUPS.map((group) => (
-              <div key={group.id} className="mobile-nav-group">
-                <button
-                  className={
-                    group.items.includes(activePage)
-                      ? 'active mobile-group-trigger'
-                      : 'mobile-group-trigger'
-                  }
-                  onClick={() =>
-                    setOpenGroup((current) =>
-                      current === group.id ? null : group.id,
-                    )
-                  }
-                  type="button"
-                >
-                  <span>{group.label}</span>
-                  <span>{openGroup === group.id ? '-' : '+'}</span>
-                </button>
-
-                <div
-                  className={`mobile-subnav ${openGroup === group.id ? 'is-open' : ''}`}
-                >
-                  {group.items.map((itemId) => (
-                    <button
-                      key={itemId}
-                      className={activePage === itemId ? 'active' : ''}
-                      onClick={() => handlePageChange(itemId)}
-                      type="button"
-                    >
-                      {pageById[itemId]?.label ?? itemId}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      <main className="page-stage" key={activePage}>
-        {activePage === 'home' ? (
-          <HomePage onPageChange={handlePageChange} />
-        ) : null}
-        {activePage === 'about' ? <AboutPage /> : null}
-        {activePage === 'stories' ? <StoriesPage /> : null}
-        {activePage === 'certificates' ? (
-          <CertificatesPage onOpenPdf={handleOpenPdf} />
-        ) : null}
-        {activePage === 'solutions' ? (
-          <SolutionsPage
-            activeService={activeService}
-            activeTrack={activeTrack}
-            onTrackChange={setActiveTrack}
-          />
-        ) : null}
-        {activePage === 'pharmacovigilance' ? <PharmacovigilancePage /> : null}
-        {activePage === 'network' ? <NetworkPage /> : null}
-        {activePage === 'career' ? <CareerPage /> : null}
-        {activePage === 'contact' ? (
-          <ContactPage formStatus={formStatus} onSubmit={handleSubmit} />
-        ) : null}
-        {activePage === 'directory' ? <DirectoryPage /> : null}
+    <div className="site-shell">
+      <SiteHeader activePath={activePath} />
+      <main>
+        <Page />
       </main>
-
-      <footer className="site-footer">
-        <div>
-          <strong>STOFARM</strong>
-          <p>Казахстан. Костанай.</p>
-        </div>
-
-        <div className="footer-links">
-          {PAGE_DEFINITIONS.map((page) => (
-            <button
-              key={page.id}
-              onClick={() => handlePageChange(page.id)}
-              type="button"
-            >
-              {page.label}
-            </button>
-          ))}
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
 
-function HomePage({ onPageChange }) {
+function SiteHeader({ activePath }) {
   return (
-    <>
-      <section className="hero-section section">
-        <div className="hero-shell card-surface" data-reveal>
-          <div className="hero-copy">
-            <p className="eyebrow">Фармдистрибуция Казахстана</p>
-            <h1>
-              <span>STOFARM.</span>
-              <span>Надежность.</span>
-              <span>Качество.</span>
-              <span>Масштаб.</span>
-            </h1>
-            <p className="hero-description">
-              STOFARM - один из ведущих фармацевтических дистрибьюторов Казахстана,
-              который сочетает широкую филиальную сеть, современные стандарты
-              качества и устойчивые партнерские отношения.
-            </p>
-            <p className="hero-support">
-              Компания развивает дистрибуцию с 2003 года и остается точкой опоры
-              для производителей, аптек, клиник и собственной команды.
-            </p>
+    <header className="site-header">
+      <a className="brand" href="#/" aria-label="STOFARM - главная">
+        <StofarmLogo />
+        <span>
+          <strong>STOFARM</strong>
+          <small>фармацевтическая дистрибуция</small>
+        </span>
+      </a>
 
-            <div className="hero-actions">
-              <button
-                className="button button-primary"
-                onClick={() => onPageChange('about')}
-                type="button"
-              >
-                О нас
-              </button>
-              <button
-                className="button button-secondary"
-                onClick={() => onPageChange('certificates')}
-                type="button"
-              >
-                Сертификаты
-              </button>
-            </div>
-
-            <div className="tag-row" aria-label="Ключевые акценты">
-              {heroTags.map((tag) => (
-                <span key={tag} className="tag-pill">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="hero-photo" data-reveal style={{ '--delay': '140ms' }}>
-            <img src={heroDoctors} alt="Команда STOFARM" />
-            <div className="hero-photo-overlay"></div>
-            <div className="hero-photo-card hero-photo-card-top">
-              <span>Качество</span>
-              <strong>ISO / GDP</strong>
-            </div>
-            <div className="hero-photo-card hero-photo-card-bottom">
-              <span>Сеть</span>
-              <strong>Вся страна</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="metrics-grid section" aria-label="Ключевые показатели">
-        {spotlightMetrics.map((metric, index) => (
-          <article
-            key={metric.value}
-            className="metric-card card-surface"
-            data-reveal
-            style={{ '--delay': `${index * 80}ms` }}
+      <nav className="main-nav" aria-label="Основная навигация">
+        {routes.map((route) => (
+          <a
+            className={activePath === route.path ? 'active' : ''}
+            href={`#${route.path}`}
+            key={route.path}
           >
-            <span className="metric-value">{metric.value}</span>
-            <p>{metric.label}</p>
-          </article>
+            {route.label}
+          </a>
         ))}
-      </section>
+      </nav>
 
-      <section className="section section-tight-top">
-        <div className="home-story card-surface" data-reveal>
-          <SectionIntro
-            eyebrow="О компании"
-            title="Национальная сеть с устойчивой репутацией."
-            description="STOFARM выстраивает систему поставок, в которой соединяются скорость, качество и доверие партнеров."
-          />
-          <div className="home-story-copy">
-            <p>
-              Компания прошла путь от регионального игрока до дистрибьютора
-              национального масштаба и сегодня работает с ключевыми регионами
-              Казахстана через единую филиальную сеть.
-            </p>
-            <p>
-              На сайте собраны основные направления: о компании, команда,
-              сертификаты, партнерство, филиалы, карьерные возможности,
-              контакты и расширенная справочная по сети STOFARM.
-            </p>
-          </div>
-        </div>
-      </section>
-    </>
+      <a className="header-cta" href="#/contacts">
+        Связаться
+      </a>
+    </header>
   )
 }
 
-function AboutPage() {
+function HomePage() {
   return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="О нас"
-        title="STOFARM - опыт, масштаб и качество."
-        description="Компания развивает фармацевтическую дистрибуцию в Казахстане, сочетая устойчивые процессы, современную логистику и сильную команду."
-      />
+    <>
+      <section className="hero page-pad">
+        <div className="hero-copy reveal">
+          <span className="eyebrow">Казахстанская фармацевтическая компания</span>
+          <h1>Национальная дистрибуция лекарств с технологичным лицом</h1>
+          <p>
+            STOFARM объединяет филиальную сеть, стандарты качества и прямые партнерства с
+            производителями, чтобы поставки медицинской продукции были точными, устойчивыми и
+            прозрачными.
+          </p>
+          <div className="hero-actions">
+            <a className="button primary" href="#/partners">
+              Для партнеров
+            </a>
+            <a className="button secondary" href="#/quality">
+              Сертификаты
+            </a>
+          </div>
+        </div>
 
-      <div className="about-stack">
-        <div className="priority-grid about-priority-grid">
-          {priorities.map((item, index) => (
-            <article
-              key={item.title}
-              className="priority-card card-surface"
-              data-reveal
-              style={{ '--delay': `${index * 80}ms` }}
-            >
-              <div className="icon-badge">
-                <SiteIcon type={item.icon} />
-              </div>
+        <div className="hero-visual reveal delay-1" aria-label="3D фармацевтическая капсула">
+          <PharmaObject />
+        </div>
+      </section>
+
+      <MetricBand />
+
+      <section className="section page-pad">
+        <SectionHeading
+          eyebrow="Позиционирование"
+          title="Сайт выглядит как современная фарм-платформа, а не просто визитка"
+          text="У конкурентов сильны факты и доверие. Мы сохраняем это ядро, но добавляем визуальную систему, отдельные сценарии для аудиторий и запоминающийся технологичный образ."
+        />
+        <div className="card-grid three">
+          {priorities.map((item) => (
+            <article className="glass-card" key={item.title}>
+              <span className="card-icon">+</span>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
             </article>
           ))}
         </div>
-
-        <div
-          className="about-copy about-copy-filled card-surface"
-          data-reveal
-          style={{ '--delay': '120ms' }}
-        >
-          {aboutIntro.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
-      </div>
-
-      <div className="chapter-grid">
-        {aboutChapters.map((chapter, index) => (
-          <article
-            key={chapter.title}
-            className="chapter-card card-surface"
-            data-reveal
-            style={{ '--delay': `${index * 70}ms` }}
-          >
-            <h3>{chapter.title}</h3>
-            {chapter.paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function StoriesPage() {
-  return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="Команда"
-        title="Люди STOFARM."
-        description="Кратко о сотрудниках и руководителях, которые формируют характер компании."
-      />
-
-      <div className="about-copy card-surface" data-reveal>
-        {peopleStoriesIntro.map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
-        ))}
-      </div>
-
-      <div className="faces-grid">
-        {peopleStories.map((person, index) => (
-          <article
-            key={person.name}
-            className="face-card card-surface"
-            data-reveal
-            style={{ '--delay': `${index * 40}ms` }}
-          >
-            <div className="face-heading">
-              <span className="face-avatar">{person.name[0]}</span>
-              <div>
-                <h3>{person.name}</h3>
-                <p className="face-role">{person.role}</p>
-              </div>
-            </div>
-
-            <ul className="bio-list">
-              {person.body.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function CertificatesPage({ onOpenPdf }) {
-  return (
-    <>
-      <section className="section">
-        <SectionIntro
-          eyebrow="Сертификаты"
-          title="Подтверждение качества."
-          description="Документы ISO и GDP отражают системный подход STOFARM к качеству и дистрибуции."
-        />
-
-        <div className="certificates-grid">
-          {certificates.map((certificate, index) => (
-            <article
-              key={certificate.title}
-              className="certificate-card card-surface"
-              data-reveal
-              style={{ '--delay': `${index * 90}ms` }}
-            >
-              <div className="icon-badge">
-                <SiteIcon type="document" />
-              </div>
-              <h3>{certificate.title}</h3>
-              <p>{certificate.text}</p>
-              <button
-                className="button button-primary"
-                onClick={() => onOpenPdf(certificate.href)}
-                type="button"
-              >
-                Открыть PDF
-              </button>
-            </article>
-          ))}
-        </div>
       </section>
 
-      <section className="section section-tight-top">
-        <SectionIntro
-          eyebrow="Качество"
-          title="Стандарты и партнеры."
-          description="Ключевые этапы развития качества и бренды, с которыми работает компания."
-        />
-
-        <div className="timeline-grid">
-          {qualityTimeline.map((step, index) => (
-            <article
-              key={`${step.year}-${step.title}`}
-              className="timeline-card card-surface"
-              data-reveal
-              style={{ '--delay': `${index * 70}ms` }}
-            >
-              <span className="timeline-year">{step.year}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </article>
-          ))}
+      <section className="split-section page-pad">
+        <div className="split-card deep-blue">
+          <span className="eyebrow">Сильная сторона</span>
+          <h2>Логистика, качество и партнерство собраны в один маршрут</h2>
+          <p>
+            Главная идея нового сайта: показать STOFARM как инфраструктурную компанию, которая
+            помогает рынку работать спокойнее, быстрее и предсказуемее.
+          </p>
+          <a className="text-link" href="#/network">
+            Посмотреть сеть филиалов
+          </a>
         </div>
-
-        <div className="partners-card card-surface" data-reveal>
-          <div>
-            <p className="eyebrow">Партнеры</p>
-            <h3>Прямые контракты с международными брендами.</h3>
-          </div>
-
-          <div className="partner-grid" aria-label="Партнерские бренды">
-            {partnerBrands.map((brand) => (
-              <span key={brand} className="partner-pill">
-                {brand}
-              </span>
-            ))}
-          </div>
+        <div className="signal-panel">
+          <span className="signal-dot red" />
+          <span className="signal-dot blue" />
+          <span className="signal-dot white" />
+          <h3>Единый контур поставки</h3>
+          <p>От производителя до филиала, от филиала до клиента, от документа до контроля качества.</p>
         </div>
       </section>
     </>
   )
 }
 
-function SolutionsPage({ activeService, activeTrack, onTrackChange }) {
+function CompanyPage() {
   return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="Партнерство"
-        title="Как STOFARM выстраивает сотрудничество."
-        description="Компания работает с производителями, медицинским сегментом и собственной командой как с долгосрочными партнерами."
-      />
-
-      <div className="solutions-layout">
-        <div className="track-switcher" data-reveal>
-          {serviceTracks.map((track) => (
-            <button
-              key={track.id}
-              className={track.id === activeTrack ? 'active' : ''}
-              onClick={() => onTrackChange(track.id)}
-              type="button"
-            >
-              <span>{track.label}</span>
-              <small>{track.badge}</small>
-            </button>
-          ))}
-        </div>
-
-        <article
-          className="solution-panel card-surface"
-          data-reveal
-          style={{ '--delay': '100ms' }}
-        >
-          <span className="panel-badge">{activeService.badge}</span>
-          <h3>{activeService.title}</h3>
-          <p className="panel-lead">{activeService.lead}</p>
-
-          <ul className="feature-list">
-            {activeService.bullets.map((bullet) => (
-              <li key={bullet}>
-                <span className="checkmark">
-                  <SiteIcon type="check" />
-                </span>
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="panel-note">
-            <span>Фокус</span>
-            <p>{activeService.accent}</p>
-          </div>
+    <PageLayout
+      eyebrow="Компания"
+      title="STOFARM: масштаб национальной сети и характер команды"
+      lead="Компания работает на фармацевтическом рынке Казахстана с 2003 года и развивает модель, где надежность поставок поддерживается людьми, процессами и технологией."
+    >
+      <div className="story-grid">
+        <article className="story-card feature">
+          <span>01</span>
+          <h2>Республиканская сеть</h2>
+          <p>
+            Филиалы и склады в ключевых городах Казахстана помогают компании быть ближе к клиентам
+            и поддерживать стабильную логистику по всей стране.
+          </p>
+        </article>
+        <article className="story-card">
+          <span>02</span>
+          <h2>Партнерский портфель</h2>
+          <p>
+            Более 200 прямых контактов с производителями укрепляют ассортимент и делают STOFARM
+            заметным игроком для международных брендов.
+          </p>
+        </article>
+        <article className="story-card">
+          <span>03</span>
+          <h2>Культура качества</h2>
+          <p>
+            Стандарты ISO и GDP превращены в ежедневную практику: от обработки заявок до хранения,
+            отгрузки и работы с обратной связью.
+          </p>
         </article>
       </div>
-    </section>
+
+      <section className="section compact">
+        <SectionHeading
+          eyebrow="Бренд-принцип"
+          title="Стабильность. Надежность. Качество."
+          text="Эти три слова стали основой визуальной системы: красный отвечает за энергию и ответственность, синий - за технологичность и доверие, белый - за чистоту и прозрачность."
+        />
+        <div className="brand-system">
+          <div className="color-chip red-chip">Ответственность</div>
+          <div className="color-chip blue-chip">Технологичность</div>
+          <div className="color-chip white-chip">Прозрачность</div>
+        </div>
+      </section>
+
+      <section className="section compact">
+        <SectionHeading
+          eyebrow="Партнеры"
+          title="Бренды, с которыми можно строить долгую цепочку доверия"
+        />
+        <div className="logo-cloud">
+          {partnerBrands.map((brand) => (
+            <article className="partner-logo-card" key={brand.name}>
+              <div className="partner-logo-frame">
+                <img src={brand.logo} alt={`${brand.name} logo`} loading="lazy" />
+              </div>
+              <strong>{brand.name}</strong>
+              <small>{brand.caption}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+    </PageLayout>
   )
 }
 
-function PharmacovigilancePage() {
+function PartnersPage() {
   return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="Фармаконадзор"
-        title="Сообщение о безопасности."
-        description="Форма для сообщений о побочных реакциях, нетипичных проявлениях или отсутствии эффекта."
-      />
-
-      <div className="phv-layout">
-        <article className="about-copy card-surface" data-reveal>
-          <p>Если вы заметили побочную реакцию или отсутствие эффекта, сообщите нам.</p>
-          <p>Информация рассматривается конфиденциально.</p>
-          <p>Если каких-то данных нет, это можно прямо указать в форме.</p>
-        </article>
-
-        <form className="phv-form card-surface" data-reveal style={{ '--delay': '120ms' }}>
-          <div className="phv-section">
-            <div className="phv-heading">
-              <p className="eyebrow">Кто сообщает</p>
-              <span>Основные данные</span>
+    <PageLayout
+      eyebrow="Партнерам"
+      title="Разные аудитории, один высокий стандарт взаимодействия"
+      lead="Страница разделена по сценариям: производителям важно покрытие и прозрачность, аптекам и клиникам - сроки и ассортимент, команде - рост и понятные процессы."
+    >
+      <div className="service-stack">
+        {serviceTracks.map((track, index) => (
+          <article className="service-card" key={track.title}>
+            <div className="service-index">{String(index + 1).padStart(2, '0')}</div>
+            <div>
+              <span className="eyebrow">{track.kicker}</span>
+              <h2>{track.title}</h2>
+              <p>{track.text}</p>
+              <div className="tag-row">
+                {track.points.map((point) => (
+                  <span key={point}>{point}</span>
+                ))}
+              </div>
             </div>
-
-            <div className="phv-grid">
-              <label>
-                Ф.И.О.
-                <input type="text" placeholder="Укажите имя" />
-              </label>
-              <label>
-                Email
-                <input type="email" placeholder="Укажите email" />
-              </label>
-              <label>
-                Статус
-                <select defaultValue="">
-                  <option value="" disabled>
-                    Выберите статус
-                  </option>
-                  <option>Работник здравоохранения</option>
-                  <option>Пациент</option>
-                </select>
-              </label>
-              <label>
-                Дата сообщения
-                <input type="text" placeholder="DD.MM.YY" />
-              </label>
-              <label>
-                Телефон
-                <input type="tel" placeholder="Укажите телефон" />
-              </label>
-              <label>
-                Город
-                <input type="text" placeholder="Укажите город" />
-              </label>
-            </div>
-          </div>
-
-          <div className="phv-section">
-            <div className="phv-heading">
-              <p className="eyebrow">О пациенте</p>
-              <span>Коротко и по сути</span>
-            </div>
-
-            <div className="phv-grid">
-              <label>
-                Ф.И.О.
-                <input type="text" placeholder="Укажите имя" />
-              </label>
-              <label>
-                Пол
-                <select defaultValue="">
-                  <option value="" disabled>
-                    Выберите пол
-                  </option>
-                  <option>Женский</option>
-                  <option>Мужской</option>
-                </select>
-              </label>
-              <label>
-                Возраст
-                <input type="text" placeholder="Укажите возраст" />
-              </label>
-              <label>
-                Контакт
-                <input type="text" placeholder="Телефон или email" />
-              </label>
-              <label className="full-width">
-                Дополнительная информация
-                <textarea
-                  rows="5"
-                  placeholder="Диагнозы, аллергия и другое"
-                ></textarea>
-              </label>
-            </div>
-          </div>
-
-          <div className="phv-note">
-            <strong>Важно:</strong> если данных нет, так и напишите.
-          </div>
-        </form>
+          </article>
+        ))}
       </div>
-    </section>
+
+      <section className="process-panel">
+        <SectionHeading
+          eyebrow="Маршрут сотрудничества"
+          title="От первого обращения до стабильного операционного ритма"
+        />
+        <div className="process-grid">
+          {['Диалог', 'Документы', 'Договор', 'Поставка', 'Контроль'].map((step, index) => (
+            <div className="process-step" key={step}>
+              <span>{index + 1}</span>
+              <strong>{step}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+    </PageLayout>
+  )
+}
+
+function QualityPage() {
+  return (
+    <PageLayout
+      eyebrow="Качество"
+      title="Система качества, которую можно показать не только текстом"
+      lead="Вместо сухой страницы сертификатов здесь собраны стандарты, документы и объяснение, почему контроль качества важен для всей цепочки поставки."
+    >
+      <div className="quality-hero">
+        <div>
+          <h2>ISO / GDP контур</h2>
+          <p>
+            Сертификаты и регулярные аудиты помогают поддерживать единый уровень хранения,
+            обработки и транспортировки фармацевтической продукции.
+          </p>
+          <div className="document-row">
+            <a className="document-link" href={`${baseUrl}iso.pdf`} target="_blank" rel="noreferrer">
+              Открыть ISO
+            </a>
+            <a className="document-link" href={`${baseUrl}gdp.pdf`} target="_blank" rel="noreferrer">
+              Открыть GDP
+            </a>
+          </div>
+        </div>
+        <div className="mini-lab" aria-hidden="true">
+          <PharmaObject compact />
+        </div>
+      </div>
+
+      <div className="timeline">
+        {qualityItems.map((item) => (
+          <article className="timeline-item" key={item.title}>
+            <span>{item.year}</span>
+            <h3>{item.title}</h3>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </div>
+
+      <section className="assurance-grid">
+        <article>
+          <h3>Фармаконадзор</h3>
+          <p>Отдельный канал для информации о нежелательных реакциях и безопасности продукции.</p>
+        </article>
+        <article>
+          <h3>Антикоррупционный контур</h3>
+          <p>Прозрачные правила взаимодействия с партнерами, поставщиками и клиентами.</p>
+        </article>
+        <article>
+          <h3>Претензионная работа</h3>
+          <p>Для обращений по качеству предусмотрен отдельный контакт: pretenz@stopharm.kz.</p>
+        </article>
+      </section>
+    </PageLayout>
   )
 }
 
 function NetworkPage() {
+  const [selectedId, setSelectedId] = useState('kostanay')
+  const selectedBranch = branches.find((branch) => branch.id === selectedId) ?? branches[0]
+
   return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="Филиалы"
-        title="Филиальная сеть STOFARM."
-        description="Главный офис, ключевые города и единый логистический контур компании по Казахстану."
-      />
-
+    <PageLayout
+      eyebrow="Сеть филиалов"
+      title="Карта присутствия, которая сразу показывает масштаб"
+      lead="Интерактивная карта делает страницу филиалов не справочником, а понятной визуальной системой национального покрытия."
+    >
       <div className="network-layout">
-        <div className="network-map card-surface" data-reveal>
-          <div className="network-center">
-            <span className="network-center-label">Head Office</span>
-            <strong>Костанай</strong>
-            <p>Центр сети</p>
-          </div>
-
-          <div className="city-cloud">
-            {networkCities.map((city) => (
-              <span key={city} className="city-pill">
-                {city}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="network-notes">
-          {geographyNotes.map((note, index) => (
-            <article
-              key={note.title}
-              className="note-card card-surface"
-              data-reveal
-              style={{ '--delay': `${index * 80}ms` }}
-            >
-              <h3>{note.title}</h3>
-              <p>{note.text}</p>
-            </article>
-          ))}
-        </div>
+        <KazakhstanMap selectedId={selectedId} onSelect={setSelectedId} />
+        <aside className="branch-focus">
+          <span className="eyebrow">Выбранный филиал</span>
+          <h2>{selectedBranch.city}</h2>
+          <p>{selectedBranch.branch}</p>
+          <dl>
+            <div>
+              <dt>Адрес</dt>
+              <dd>{selectedBranch.address}</dd>
+            </div>
+            <div>
+              <dt>Телефон</dt>
+              <dd>{selectedBranch.phone}</dd>
+            </div>
+          </dl>
+        </aside>
       </div>
-    </section>
+
+      <div className="branch-grid">
+        {branches.map((branch) => (
+          <button
+            className={branch.id === selectedId ? 'branch-card active' : 'branch-card'}
+            key={branch.id}
+            onClick={() => setSelectedId(branch.id)}
+            type="button"
+          >
+            <strong>{branch.city}</strong>
+            <span>{branch.address}</span>
+          </button>
+        ))}
+      </div>
+    </PageLayout>
   )
 }
 
 function CareerPage() {
   return (
-    <section className="section">
-      <SectionIntro
-        eyebrow="Карьера"
-        title="Люди - основа STOFARM."
-        description="Компания объединяет развитие сотрудников, эффективные процессы и сильную корпоративную культуру."
-      />
+    <PageLayout
+      eyebrow="Карьера"
+      title="Современная компания должна показывать не только бизнес, но и людей"
+      lead="Карьерная страница собирает культуру, обучение и будущие вакансии в один живой раздел, который можно расширять по мере появления новых ролей."
+    >
+      <div className="career-hero">
+        <div>
+          <h2>Одна команда, много городов</h2>
+          <p>
+            STOFARM растет благодаря специалистам, которые соединяют фармацевтическую экспертизу,
+            аккуратность в процессах и уважение к партнеру.
+          </p>
+        </div>
+        <a className="button primary" href="#/contacts">
+          Отправить резюме
+        </a>
+      </div>
 
-      <div className="culture-grid">
-        {cultureCards.map((card, index) => (
-          <article
-            key={card.title}
-            className="culture-card card-surface"
-            data-reveal
-            style={{ '--delay': `${index * 80}ms` }}
-          >
-            <div className="icon-badge">
-              <SiteIcon type={card.icon} />
-            </div>
+      <div className="card-grid three">
+        {cultureCards.map((card) => (
+          <article className="glass-card" key={card.title}>
+            <span className="card-icon">S</span>
             <h3>{card.title}</h3>
             <p>{card.text}</p>
           </article>
         ))}
       </div>
 
-      <article className="career-story card-surface" data-reveal>
-        <div className="career-story-head">
-          <p className="eyebrow">Возможности</p>
-          <h3>Рост, самореализация и развитие внутри компании.</h3>
-        </div>
-
-        <div className="career-story-copy">
-          {careerNarrative.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
-      </article>
-    </section>
-  )
-}
-
-function ContactPage({ formStatus, onSubmit }) {
-  return (
-    <section className="section contact-section">
-      <div className="contact-layout card-dark">
-        <div className="contact-copy" data-reveal>
-          <p className="eyebrow">Контакты</p>
-          <h2>Свяжитесь с нами.</h2>
-          <p className="contact-description">
-            Для партнерства, поставок, общих запросов и деловой коммуникации.
-          </p>
-
-          <div className="contact-grid">
-            {contactChannels.map((channel) => (
-              <a
-                key={channel.label}
-                className="contact-card"
-                href={channel.href}
-                target={channel.href.startsWith('http') ? '_blank' : undefined}
-                rel={channel.href.startsWith('http') ? 'noreferrer' : undefined}
-              >
-                <span>{channel.label}</span>
-                <strong>{channel.value}</strong>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <form
-          className="contact-form card-surface"
-          onSubmit={onSubmit}
-          data-reveal
-          style={{ '--delay': '120ms' }}
-        >
-          <label>
-            Имя
-            <input name="name" type="text" placeholder="Ваше имя" required />
-          </label>
-          <label>
-            Компания
-            <input
-              name="company"
-              type="text"
-              placeholder="Название компании"
-              required
-            />
-          </label>
-          <label>
-            Телефон
-            <input name="phone" type="tel" placeholder="+7 7XX XXX XX XX" />
-          </label>
-          <label>
-            Email
-            <input
-              name="email"
-              type="email"
-              placeholder="name@company.kz"
-              required
-            />
-          </label>
-          <label className="full-width">
-            Запрос
-            <textarea
-              name="message"
-              rows="5"
-              placeholder="Коротко опишите запрос"
-            ></textarea>
-          </label>
-
-          <button className="button button-primary full-width" type="submit">
-            Открыть письмо
-          </button>
-          <p className="form-note">Откроется черновик письма.</p>
-          {formStatus ? <p className="form-status">{formStatus}</p> : null}
-        </form>
-      </div>
-    </section>
-  )
-}
-
-function DirectoryPage() {
-  const [selectedBranchId, setSelectedBranchId] = useState(null)
-  const selectedBranch =
-    directoryBranchProfiles.find((branch) => branch.id === selectedBranchId) ?? null
-
-  const openBranchCard = (branchId) => {
-    setSelectedBranchId(branchId)
-  }
-
-  const closeBranchCard = () => {
-    setSelectedBranchId(null)
-  }
-
-  return (
-    <section className="section">
-      <SectionIntro
-        eyebrow={'\u0421\u043f\u0440\u0430\u0432\u043e\u0447\u043d\u0430\u044f'}
-        title={'\u041a\u0430\u0440\u0442\u0430 \u0444\u0438\u043b\u0438\u0430\u043b\u043e\u0432 STOFARM.'}
-        description={
-          '\u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u043d\u0430 \u043e\u0431\u043b\u0430\u0441\u0442\u044c \u043d\u0430 \u043a\u0430\u0440\u0442\u0435, \u0447\u0442\u043e\u0431\u044b \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u043d\u0435\u0431\u043e\u043b\u044c\u0448\u0443\u044e \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0441 \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u0435\u0439 \u043e \u0444\u0438\u043b\u0438\u0430\u043b\u0435. \u041f\u043e\u043b\u043d\u0430\u044f \u0441\u043f\u0440\u0430\u0432\u043e\u0447\u043d\u0430\u044f \u0438\u043d\u0444\u043e\u0440\u043c\u0430\u0446\u0438\u044f \u043f\u043e \u0441\u0435\u0442\u0438 \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u0430 \u043d\u0438\u0436\u0435.'
-        }
-      />
-
-      <div className="directory-map-shell card-surface" data-reveal>
-        <div className="directory-map-card directory-map-card-full">
-          <div className="directory-map-head">
-            <p className="eyebrow">{'\u041a\u0430\u0440\u0442\u0430 \u041a\u0430\u0437\u0430\u0445\u0441\u0442\u0430\u043d\u0430'}</p>
-            <p className="directory-map-copy">
-              {'\u0411\u043e\u043b\u044c\u0448\u0430\u044f \u0438\u043d\u0442\u0435\u0440\u0430\u043a\u0442\u0438\u0432\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430 \u0444\u0438\u043b\u0438\u0430\u043b\u044c\u043d\u043e\u0439 \u0441\u0435\u0442\u0438 STOFARM.'}
-            </p>
-          </div>
-
-          <div className="directory-map-frame directory-map-frame-fullscreen">
-            <div className="directory-map-grid" aria-hidden="true"></div>
-
-            <svg
-              className="directory-map"
-              viewBox={directoryMapMeta.viewBox}
-              aria-label={'\u041a\u0430\u0440\u0442\u0430 \u0444\u0438\u043b\u0438\u0430\u043b\u043e\u0432 STOFARM'}
-            >
-              <g className="directory-map-regions">
-                {directoryMapRegions.map((region) => (
-                  <g
-                    key={region.id}
-                    className="map-region-group"
-                    onClick={() => openBranchCard(region.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openBranchCard(region.id)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <path
-                      className={`map-region ${selectedBranchId === region.id ? 'is-active' : ''}`}
-                      d={region.path}
-                    />
-                    <text
-                      className={`map-region-label ${DIRECTORY_MAP_SMALL_LABELS.has(region.id) ? 'is-small' : ''}`}
-                      x={region.labelX}
-                      y={region.labelY}
-                      textAnchor="middle"
-                    >
-                      {DIRECTORY_MAP_LABELS[region.id]}
-                    </text>
-                  </g>
-                ))}
-              </g>
-
-              <g className="directory-map-markers">
-                {directoryMapMarkers.map((marker) => (
-                  <g
-                    key={marker.id}
-                    className="map-marker-group"
-                    onClick={() => openBranchCard(marker.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        openBranchCard(marker.id)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <circle
-                      className={`map-marker-dot ${selectedBranchId === marker.id ? 'is-active' : ''}`}
-                      cx={marker.x}
-                      cy={marker.y}
-                      r="7"
-                    />
-                    <circle
-                      className={`map-marker-ring ${selectedBranchId === marker.id ? 'is-active' : ''}`}
-                      cx={marker.x}
-                      cy={marker.y}
-                      r="14"
-                    />
-                    <text
-                      className="map-marker-label"
-                      x={marker.x + (DIRECTORY_MAP_MARKER_OFFSETS[marker.id]?.x ?? 18)}
-                      y={marker.y + (DIRECTORY_MAP_MARKER_OFFSETS[marker.id]?.y ?? -10)}
-                    >
-                      {DIRECTORY_MAP_LABELS[marker.id]}
-                    </text>
-                  </g>
-                ))}
-              </g>
-            </svg>
-
-            {selectedBranch ? (
-              <article className="directory-popup card-surface" role="dialog" aria-live="polite">
-                <button
-                  className="directory-popup-close"
-                  onClick={closeBranchCard}
-                  type="button"
-                  aria-label={'\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0444\u0438\u043b\u0438\u0430\u043b\u0430'}
-                >
-                  {'\u00d7'}
-                </button>
-                <p className="eyebrow">{selectedBranch.branch}</p>
-                <h3>{selectedBranch.director}</h3>
-                <p className="directory-role">{selectedBranch.role}</p>
-                <p className="directory-summary">{selectedBranch.summary}</p>
-
-                <div className="directory-popup-meta">
-                  <div>
-                    <span>{'\u0410\u0434\u0440\u0435\u0441'}</span>
-                    <strong>{selectedBranch.address}</strong>
-                  </div>
-                  <div>
-                    <span>{'\u0422\u0435\u043b\u0435\u0444\u043e\u043d'}</span>
-                    <strong>
-                      <a href={`tel:${selectedBranch.phone.replace(/[^\d+]/g, '')}`}>
-                        {selectedBranch.phone}
-                      </a>
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Email</span>
-                    <strong>
-                      <a href={`mailto:${selectedBranch.email}`}>{selectedBranch.email}</a>
-                    </strong>
-                  </div>
-                </div>
-              </article>
-            ) : (
-              <div className="directory-map-hint">
-                {'\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043e\u0431\u043b\u0430\u0441\u0442\u044c \u043d\u0430 \u043a\u0430\u0440\u0442\u0435, \u0447\u0442\u043e\u0431\u044b \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0444\u0438\u043b\u0438\u0430\u043b\u0430.'}
+      <section className="vacancy-panel">
+        <span className="eyebrow">Готовые блоки для вакансий</span>
+        <h2>Можно быстро добавить реальные позиции</h2>
+        <div className="vacancy-list">
+          {['Менеджер по работе с клиентами', 'Специалист склада', 'Координатор качества'].map(
+            (vacancy) => (
+              <div className="vacancy-item" key={vacancy}>
+                <strong>{vacancy}</strong>
+                <span>Костанай / регионы</span>
               </div>
-            )}
-          </div>
-
-          <div className="directory-region-list">
-            {directoryBranchProfiles.map((branch) => (
-              <button
-                key={branch.id}
-                className={selectedBranchId === branch.id ? 'is-active' : ''}
-                onClick={() => openBranchCard(branch.id)}
-                type="button"
-              >
-                {branch.branch}
-              </button>
-            ))}
-          </div>
+            ),
+          )}
         </div>
+      </section>
+    </PageLayout>
+  )
+}
+
+function ContactsPage() {
+  const handleSubmit = (event) => {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const name = formData.get('name')?.toString().trim() || 'Не указано'
+    const contact = formData.get('contact')?.toString().trim() || 'Не указано'
+    const message = formData.get('message')?.toString().trim() || 'Без сообщения'
+    const body = [
+      'Здравствуйте, команда STOFARM!',
+      '',
+      `Имя: ${name}`,
+      `Контакт: ${contact}`,
+      '',
+      'Сообщение:',
+      message,
+    ].join('\n')
+
+    window.location.href = `mailto:kanc@stopharm.kz?subject=${encodeURIComponent(
+      'Обращение с сайта STOFARM',
+    )}&body=${encodeURIComponent(body)}`
+  }
+
+  return (
+    <PageLayout
+      eyebrow="Контакты"
+      title="Все ключевые каналы связи на одной спокойной странице"
+      lead="Контакты сделаны как современный офисный экран: быстро найти телефон, email, адрес головного офиса и направление обращения."
+    >
+      <div className="contact-grid">
+        <article className="contact-card main-contact">
+          <span className="eyebrow">Головной офис</span>
+          <h2>Костанай, пр. Аль-Фараби 111 А</h2>
+          <p>Телефон: +7 (7142) 91-77-10</p>
+          <p>Телефон доверия: +7 (7142) 91-77-32</p>
+        </article>
+        <article className="contact-card">
+          <h3>Канцелярия</h3>
+          <a href="mailto:kanc@stopharm.kz">kanc@stopharm.kz</a>
+        </article>
+        <article className="contact-card">
+          <h3>Претензии</h3>
+          <a href="mailto:pretenz@stopharm.kz">pretenz@stopharm.kz</a>
+        </article>
       </div>
 
-      <div className="directory-table-wrap card-surface" data-reveal>
-        <table className="directory-table">
-          <thead>
-            <tr>
-              <th>{'\u0424\u0438\u043b\u0438\u0430\u043b'}</th>
-              <th>{'\u0410\u0434\u0440\u0435\u0441'}</th>
-              <th>{'\u0422\u0435\u043b\u0435\u0444\u043e\u043d'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {directoryEntries.map((entry) => (
-              <tr key={entry.id}>
-                <td>
-                  <button
-                    className={`directory-link ${selectedBranchId === entry.id ? 'is-active' : ''}`}
-                    onClick={() => openBranchCard(entry.id)}
-                    type="button"
-                  >
-                    {entry.branch}
-                  </button>
-                </td>
-                <td>{entry.address}</td>
-                <td>
-                  <a href={`tel:${entry.phone.replace(/[^\d+]/g, '')}`}>{entry.phone}</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <form className="contact-form" onSubmit={handleSubmit}>
+        <div>
+          <label htmlFor="name">Имя</label>
+          <input id="name" name="name" placeholder="Как к вам обращаться" type="text" />
+        </div>
+        <div>
+          <label htmlFor="phone">Телефон или email</label>
+          <input id="phone" name="contact" placeholder="+7..." type="text" />
+        </div>
+        <div className="wide">
+          <label htmlFor="message">Сообщение</label>
+          <textarea id="message" name="message" placeholder="Коротко опишите вопрос" rows="5" />
+        </div>
+        <button className="button primary" type="submit">
+          Подготовить обращение
+        </button>
+      </form>
+    </PageLayout>
+  )
+}
+
+function PageLayout({ children, eyebrow, lead, title }) {
+  return (
+    <>
+      <section className="page-hero page-pad">
+        <span className="eyebrow">{eyebrow}</span>
+        <h1>{title}</h1>
+        {lead ? <p>{lead}</p> : null}
+      </section>
+      <div className="page-content page-pad">{children}</div>
+    </>
+  )
+}
+
+function MetricBand() {
+  return (
+    <section className="metric-band page-pad" aria-label="Ключевые показатели">
+      {metrics.map((metric) => (
+        <div className="metric" key={metric.label}>
+          <strong>{metric.value}</strong>
+          <span>{metric.label}</span>
+        </div>
+      ))}
     </section>
   )
 }
 
-function SectionIntro({ eyebrow, title, description }) {
+function SectionHeading({ eyebrow, text, title }) {
   return (
-    <div className="section-intro" data-reveal>
-      <p className="eyebrow">{eyebrow}</p>
+    <div className="section-heading">
+      {eyebrow ? <span className="eyebrow">{eyebrow}</span> : null}
       <h2>{title}</h2>
-      <p>{description}</p>
+      {text ? <p>{text}</p> : null}
     </div>
   )
 }
 
-function SiteIcon({ type }) {
-  switch (type) {
-    case 'shield':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3l7 3v5c0 4.6-2.8 8.7-7 10-4.2-1.3-7-5.4-7-10V6l7-3z" />
-          <path d="M9 12l2 2 4-5" />
-        </svg>
-      )
-    case 'network':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 4v5" />
-          <path d="M5 20h14" />
-          <path d="M6 8h12" />
-          <path d="M7 12v4" />
-          <path d="M12 8v8" />
-          <path d="M17 12v4" />
-          <circle cx="12" cy="4" r="2" />
-          <circle cx="6" cy="8" r="2" />
-          <circle cx="18" cy="8" r="2" />
-          <circle cx="7" cy="18" r="2" />
-          <circle cx="17" cy="18" r="2" />
-        </svg>
-      )
-    case 'handshake':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M8 11l3 3a2 2 0 002.8 0l5.2-5.2" />
-          <path d="M3 12l4-4 5 5" />
-          <path d="M13 8l2-2a3 3 0 014.2 0L21 8" />
-          <path d="M3 16l4 4 4-4" />
-        </svg>
-      )
-    case 'spark':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3l1.8 4.8L19 9.6l-4.1 3.1L16 18l-4-2.6L8 18l1.1-5.3L5 9.6l5.2-1.8L12 3z" />
-        </svg>
-      )
-    case 'academy':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M3 9l9-5 9 5-9 5-9-5z" />
-          <path d="M7 11v4c0 1.7 2.2 3 5 3s5-1.3 5-3v-4" />
-        </svg>
-      )
-    case 'gear':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 8a4 4 0 100 8 4 4 0 000-8z" />
-          <path d="M12 2v3" />
-          <path d="M12 19v3" />
-          <path d="M4.9 4.9l2.1 2.1" />
-          <path d="M17 17l2.1 2.1" />
-          <path d="M2 12h3" />
-          <path d="M19 12h3" />
-          <path d="M4.9 19.1L7 17" />
-          <path d="M17 7l2.1-2.1" />
-        </svg>
-      )
-    case 'people':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="8" cy="9" r="3" />
-          <circle cx="16" cy="8" r="2.5" />
-          <path d="M3 19c0-2.8 2.2-5 5-5s5 2.2 5 5" />
-          <path d="M13 19c0-2.3 1.8-4.1 4.1-4.1 2.3 0 3.9 1.8 3.9 4.1" />
-        </svg>
-      )
-    case 'document':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 3h7l5 5v13H7z" />
-          <path d="M14 3v5h5" />
-          <path d="M9 13h6" />
-          <path d="M9 17h6" />
-        </svg>
-      )
-    case 'check':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 12.5l4.2 4.2L19 7" />
-        </svg>
-      )
-    default:
-      return null
-  }
+function PharmaObject({ compact = false }) {
+  return (
+    <div className={compact ? 'pharma-object compact' : 'pharma-object'}>
+      <div className="orbital orbital-one" />
+      <div className="orbital orbital-two" />
+      <div className="orbital orbital-three" />
+      <div className="capsule">
+        <span className="capsule-depth" />
+        <span className="capsule-body">
+          <span className="capsule-half red-half" />
+          <span className="capsule-half blue-half" />
+          <span className="capsule-seam" />
+          <span className="capsule-glass" />
+          <span className="capsule-shine capsule-shine-main" />
+          <span className="capsule-shine capsule-shine-tip" />
+        </span>
+      </div>
+      <span className="molecule node-one" />
+      <span className="molecule node-two" />
+      <span className="molecule node-three" />
+      <span className="molecule node-four" />
+      <div className="shadow-disc" />
+    </div>
+  )
+}
+
+function KazakhstanMap({ onSelect, selectedId }) {
+  const visibleRegions = directoryMapRegions.filter((region) =>
+    branches.some((branch) => branch.id === region.id),
+  )
+
+  return (
+    <div className="map-panel">
+      <svg
+        aria-label="Карта филиалов Казахстана"
+        className="kazakhstan-map"
+        role="img"
+        viewBox={directoryMapMeta.viewBox}
+      >
+        <g className="map-shadow-layer" aria-hidden="true">
+          {visibleRegions.map((region) => (
+            <path d={region.path} key={`${region.id}-shadow`} />
+          ))}
+        </g>
+        {visibleRegions.map((region) => {
+          const branch = branches.find((item) => item.id === region.id)
+
+          return (
+            <g key={region.id}>
+              <path
+                className={selectedId === region.id ? 'map-region active' : 'map-region'}
+                d={region.path}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelect(region.id)
+                  }
+                }}
+                onClick={() => onSelect(region.id)}
+                role="button"
+                tabIndex="0"
+              />
+              <text className="map-label" x={region.labelX} y={region.labelY}>
+                {branch?.city}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+function SiteFooter() {
+  return (
+    <footer className="site-footer page-pad">
+      <div>
+        <a className="brand footer-brand" href="#/">
+          <StofarmLogo />
+          <span>
+            <strong>STOFARM</strong>
+            <small>2003-{new Date().getFullYear()}</small>
+          </span>
+        </a>
+        <p>Национальная фармацевтическая дистрибуция с акцентом на качество и партнерство.</p>
+      </div>
+      <div className="footer-links">
+        <a href="#/quality">ISO / GDP</a>
+        <a href="#/network">Филиалы</a>
+        <a href="#/contacts">Контакты</a>
+      </div>
+    </footer>
+  )
+}
+
+function StofarmLogo() {
+  const gradientId = useId().replace(/:/g, '')
+
+  return (
+    <span className="brand-mark brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64" role="img">
+        <defs>
+          <linearGradient id={`${gradientId}-brand`} x1="8" x2="56" y1="8" y2="56">
+            <stop offset="0" stopColor="#e31b35" />
+            <stop offset="0.52" stopColor="#ffffff" />
+            <stop offset="1" stopColor="#0b3d91" />
+          </linearGradient>
+        </defs>
+        <path
+          className="logo-shield"
+          d="M32 5 52 13v17c0 13.8-7.9 23.3-20 29-12.1-5.7-20-15.2-20-29V13L32 5Z"
+        />
+        <path
+          className="logo-pill"
+          d="M20.8 34.2c-3.4-3.4-3.4-8.9 0-12.3s8.9-3.4 12.3 0l10.1 10.1c3.4 3.4 3.4 8.9 0 12.3s-8.9 3.4-12.3 0L20.8 34.2Z"
+          fill={`url(#${gradientId}-brand)`}
+        />
+        <path className="logo-cut" d="m31.5 20.8-11 11" />
+        <path className="logo-cross" d="M41.5 18v10M36.5 23h10" />
+      </svg>
+    </span>
+  )
+}
+
+const pageMap = {
+  '/': HomePage,
+  '/company': CompanyPage,
+  '/partners': PartnersPage,
+  '/quality': QualityPage,
+  '/network': NetworkPage,
+  '/career': CareerPage,
+  '/contacts': ContactsPage,
 }
 
 export default App

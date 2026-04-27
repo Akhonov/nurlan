@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 72" role="img" aria-labelledby="title desc">
+  <title id="title">STOFARM concept logo</title>
+  <desc id="desc">Original red, blue and white pharmaceutical shield logo for STOFARM.</desc>
+  <defs>
+    <linearGradient id="shield" x1="10" x2="70" y1="8" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e31b35" />
+      <stop offset="1" stop-color="#0b3d91" />
+    </linearGradient>
+    <linearGradient id="pill" x1="19" x2="61" y1="22" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset=".5" stop-color="#ffffff" />
+      <stop offset=".51" stop-color="#e31b35" />
+      <stop offset="1" stop-color="#0b3d91" />
+    </linearGradient>
+  </defs>
+  <path d="M40 5 64 14.5V34c0 16.6-9.5 28-24 34.8C25.5 62 16 50.6 16 34V14.5L40 5Z" fill="url(#shield)" />
+  <path d="M26.5 38.2a9.6 9.6 0 0 1 0-13.6 9.6 9.6 0 0 1 13.6 0l13.4 13.4a9.6 9.6 0 0 1 0 13.6 9.6 9.6 0 0 1-13.6 0L26.5 38.2Z" fill="url(#pill)" stroke="#fff" stroke-width="3" />
+  <path d="m39.8 24.5-13 13" fill="none" stroke="#0b3d91" stroke-linecap="round" stroke-width="3.4" opacity=".72" />
+  <path d="M53 18v11M47.5 23.5h11" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="4" />
+  <text x="84" y="39" fill="#071b49" font-family="Space Grotesk, Onest, Arial, sans-serif" font-size="28" font-weight="800" letter-spacing="2.2">STOFARM</text>
+  <text x="85" y="56" fill="#5c667a" font-family="Onest, Arial, sans-serif" font-size="10" font-weight="700" letter-spacing="1.1">PHARMA DISTRIBUTION</text>
+</svg>
